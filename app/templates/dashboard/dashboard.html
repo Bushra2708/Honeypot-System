@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Honeypot SOC Terminal</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-darker: #020617;
+            --bg-card: rgba(15, 23, 42, 0.6);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --cyber-cyan: #06b6d4;
+            --cyber-rose: #f43f5e;
+            --cyber-emerald: #10b981;
+            --cyber-amber: #f59e0b;
+        }
+
+        body {
+            background-color: var(--bg-darker);
+            color: var(--text-primary);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            background-color: #090d16;
+            border-right: 1px solid var(--border-color);
+            min-height: 100vh;
+            padding: 24px;
+            position: fixed;
+            width: 260px;
+            z-index: 100;
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+            margin-bottom: 30px;
+        }
+
+        .sidebar-brand i {
+            color: var(--cyber-cyan);
+            animation: pulse-glow 2s infinite;
+        }
+
+        .nav-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #475569;
+            margin: 20px 0 10px 10px;
+        }
+
+        .nav-link-custom {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-secondary);
+            padding: 10px 12px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            margin-bottom: 4px;
+        }
+
+        .nav-link-custom:hover, .nav-link-custom.active {
+            color: var(--text-primary);
+            background-color: rgba(6, 182, 212, 0.08);
+            box-shadow: inset 0 0 8px rgba(6, 182, 212, 0.05);
+        }
+
+        .nav-link-custom i {
+            width: 18px;
+            height: 18px;
+        }
+
+        .nav-link-custom.active i {
+            color: var(--cyber-cyan);
+        }
+
+        /* Main Content Wrapper */
+        .main-content {
+            margin-left: 260px;
+            padding: 40px;
+        }
+
+        /* Card Custom Styling */
+        .glass-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at top left, rgba(255,255,255,0.02) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        .card-header-custom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-title-custom {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-title-custom i {
+            color: var(--text-secondary);
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Metrics Grid */
+        .stat-value {
+            font-size: 36px;
+            font-weight: 700;
+            margin-top: 8px;
+            letter-spacing: -1px;
+            transition: all 0.5s ease;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* Pulse glow animation for total count update */
+        @keyframes pulse-glow {
+            0% {
+                text-shadow: 0 0 0px rgba(6, 182, 212, 0);
+                transform: scale(1);
+            }
+            50% {
+                text-shadow: 0 0 15px rgba(6, 182, 212, 0.8);
+                transform: scale(1.05);
+                color: #22d3ee;
+            }
+            100% {
+                text-shadow: 0 0 0px rgba(6, 182, 212, 0);
+                transform: scale(1);
+            }
+        }
+
+        .pulse-glow {
+            animation: pulse-glow 1s ease-out;
+        }
+
+        /* Live indicator */
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--cyber-rose);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 8px var(--cyber-rose);
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            0% { opacity: 0.3; }
+            50% { opacity: 1; box-shadow: 0 0 12px var(--cyber-rose); }
+            100% { opacity: 0.3; }
+        }
+
+        /* List Styling & Progress bar for counters */
+        .stat-list-item {
+            display: flex;
+            flex-direction: column;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .stat-list-item:last-child {
+            border-bottom: none;
+        }
+
+        .stat-list-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+
+        .stat-list-name {
+            font-weight: 500;
+            color: #e2e8f0;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-list-count {
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .stat-progress-bar {
+            height: 4px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 100px;
+            overflow: hidden;
+        }
+
+        .stat-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0891b2, var(--cyber-cyan));
+            border-radius: 100px;
+            width: 0%;
+            transition: width 0.8s ease-out;
+        }
+
+        /* Live Alert Feed */
+        .live-feed-container {
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 6px;
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .feed-item {
+            background-color: rgba(9, 13, 22, 0.5);
+            border-left: 3px solid var(--cyber-rose);
+            border-radius: 0 10px 10px 0;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+            animation: slide-in 0.3s ease-out;
+        }
+
+        .feed-item:hover {
+            background-color: rgba(9, 13, 22, 0.8);
+            transform: translateX(2px);
+        }
+
+        @keyframes slide-in {
+            from { transform: translateY(-10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .feed-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 6px;
+        }
+
+        .feed-ip {
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            color: #fca5a5;
+        }
+
+        .feed-time {
+            color: var(--text-secondary);
+        }
+
+        .feed-desc {
+            font-size: 13.5px;
+            line-height: 1.5;
+        }
+
+        /* Tabs configuration */
+        .nav-tabs-custom {
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 16px;
+            list-style: none;
+            padding: 0;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 10px 0;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            position: relative;
+            transition: color 0.2s ease;
+        }
+
+        .tab-btn.active, .tab-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: var(--cyber-cyan);
+            box-shadow: 0 0 8px var(--cyber-cyan);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Search input styling */
+        .search-wrapper {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .search-wrapper i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            width: 16px;
+            height: 16px;
+        }
+
+        .search-control {
+            background-color: rgba(9, 13, 22, 0.8);
+            border: 1px solid var(--border-color);
+            color: white;
+            padding: 10px 14px 10px 42px;
+            border-radius: 8px;
+            font-size: 14px;
+            width: 100%;
+            transition: all 0.25s ease;
+        }
+
+        .search-control:focus {
+            background-color: #090d16;
+            border-color: var(--cyber-cyan);
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.15);
+            outline: none;
+        }
+
+        /* Table Styling */
+        .table-responsive {
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .table-custom {
+            margin: 0;
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+        }
+
+        .table-custom th {
+            background-color: #090d16;
+            color: var(--text-secondary);
+            font-weight: 600;
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .table-custom td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color);
+            color: #cbd5e1;
+            background-color: rgba(15, 23, 42, 0.2);
+            transition: background-color 0.2s ease;
+        }
+
+        .table-custom tr:hover td {
+            background-color: rgba(15, 23, 42, 0.5);
+            cursor: pointer;
+        }
+
+        .badge-country {
+            background-color: rgba(6, 182, 212, 0.1);
+            color: var(--cyber-cyan);
+            border: 1px solid rgba(6, 182, 212, 0.2);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11.5px;
+            font-weight: 500;
+        }
+
+        /* Expandable metadata row */
+        .expand-row td {
+            padding: 0 !important;
+            border-bottom: none;
+            background-color: #070a12 !important;
+        }
+
+        .detail-pane {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s cubic-bezier(0, 1, 0, 1);
+            padding: 0 24px;
+        }
+
+        .detail-pane.open {
+            max-height: 500px;
+            transition: max-height 0.3s cubic-bezier(1, 0, 1, 0);
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .detail-item {
+            font-size: 13px;
+        }
+
+        .detail-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .detail-value {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: rgba(2, 6, 23, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 6px;
+            padding: 6px 12px;
+            color: #e2e8f0;
+            word-break: break-all;
+        }
+
+        /* Pagination bar */
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 16px;
+        }
+
+        .pagination-info {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .pagination-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-pagination {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-pagination:hover:not(:disabled) {
+            background-color: rgba(6, 182, 212, 0.1);
+            border-color: var(--cyber-cyan);
+            color: white;
+        }
+
+        .btn-pagination:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="sidebar-brand">
+            <i data-lucide="shield-alert"></i>
+            <span>HONEYPOT SOC</span>
+        </div>
+
+        <div class="nav-section-title">Navigation</div>
+        <a href="#" class="nav-link-custom active">
+            <i data-lucide="activity"></i>
+            <span>Threat Dashboard</span>
+        </a>
+
+        <div class="nav-section-title">System Operations</div>
+        <span class="nav-link-custom">
+            <i data-lucide="database"></i>
+            <span>SQLite Hub: Active</span>
+        </span>
+        <span class="nav-link-custom">
+            <i data-lucide="cpu"></i>
+            <span>SOC Thread: Online</span>
+        </span>
+
+        <div style="position: absolute; bottom: 24px; left: 24px; right: 24px;">
+            <hr style="border-color: var(--border-color); margin-bottom: 20px;">
+            <a href="/logout" class="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center gap-2" style="border-radius: 8px; font-weight: 600; font-size: 14px;">
+                <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
+                Disconnect
+            </a>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+        <!-- TOP NAVIGATION BAR -->
+        <div class="d-flex justify-content-between align-items-center mb-4 pb-3" style="border-bottom: 1px solid var(--border-color);">
+            <div>
+                <h1 style="font-size: 24px; font-weight: 700; margin: 0; letter-spacing: -0.5px;">Security Operations Center</h1>
+                <p style="color: var(--text-secondary); margin: 4px 0 0 0; font-size: 13.5px;">Honeypot intrusion detection telemetry console.</p>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <div class="d-flex align-items-center gap-2 bg-dark px-3 py-2 border rounded-3" style="background-color: #090d16 !important; border-color: var(--border-color) !important;">
+                    <span class="live-dot"></span>
+                    <span style="font-size: 12px; font-weight: 700; color: #cbd5e1; letter-spacing: 0.5px;">REAL-TIME FEED ACTIVE</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- STATS / METRICS WIDGETS -->
+        <div class="row">
+            <div class="col-md-4">
+                <div class="glass-card">
+                    <span class="stat-label">Total Intrusion Attempts</span>
+                    <div class="stat-value text-danger" id="statTotalAttacks">{{ total_attacks }}</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="glass-card">
+                    <span class="stat-label">Honeypot Nodes Online</span>
+                    <div class="stat-value text-success" style="color: var(--cyber-emerald) !important;">1 ACTIVE</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="glass-card">
+                    <span class="stat-label">Threat Index Status</span>
+                    <div class="stat-value" style="color: var(--cyber-rose) !important;">HIGH CRIT</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ANALYTICS ROW -->
+        <div class="row">
+            <!-- CHARTS SECTION -->
+            <div class="col-lg-8">
+                <div class="glass-card">
+                    <div class="card-header-custom">
+                        <h4 class="card-title-custom">
+                            <i data-lucide="bar-chart-3"></i>
+                            Username Attack Velocity
+                        </h4>
+                    </div>
+                    <div style="height: 280px; position: relative;">
+                        <canvas id="usernameChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GEOLOCATION PIE CHART -->
+            <div class="col-lg-4">
+                <div class="glass-card">
+                    <div class="card-header-custom">
+                        <h4 class="card-title-custom">
+                            <i data-lucide="pie-chart"></i>
+                            Target Origin Distribution
+                        </h4>
+                    </div>
+                    <div style="height: 280px; position: relative;">
+                        <canvas id="countryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LISTS SECTION -->
+        <div class="row">
+            <!-- TOP USERNAMES -->
+            <div class="col-md-4">
+                <div class="glass-card">
+                    <div class="card-header-custom">
+                        <h4 class="card-title-custom">
+                            <i data-lucide="user-x"></i>
+                            Top Targeted Usernames
+                        </h4>
+                    </div>
+                    <div id="topUsernamesList">
+                        {% if top_usernames %}
+                            {% for item in top_usernames %}
+                            <div class="stat-list-item">
+                                <div class="stat-list-meta">
+                                    <span class="stat-list-name">{{ item[0] }}</span>
+                                    <span class="stat-list-count">{{ item[1] }} attempts</span>
+                                </div>
+                                <div class="stat-progress-bar">
+                                    <div class="stat-progress-fill" style="width: {% if total_attacks > 0 %}{{ (item[1] / total_attacks) * 100 }}{% else %}0{% endif %}%"></div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-4 text-muted" style="font-size: 13px;">No intrusion telemetry logged.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- TOP PASSWORDS -->
+            <div class="col-md-4">
+                <div class="glass-card">
+                    <div class="card-header-custom">
+                        <h4 class="card-title-custom">
+                            <i data-lucide="key-round"></i>
+                            Top Targeted Passwords
+                        </h4>
+                    </div>
+                    <div id="topPasswordsList">
+                        {% if top_passwords %}
+                            {% for item in top_passwords %}
+                            <div class="stat-list-item">
+                                <div class="stat-list-meta">
+                                    <span class="stat-list-name">{{ item[0] }}</span>
+                                    <span class="stat-list-count">{{ item[1] }} attempts</span>
+                                </div>
+                                <div class="stat-progress-bar">
+                                    <div class="stat-progress-fill" style="width: {% if total_attacks > 0 %}{{ (item[1] / total_attacks) * 100 }}{% else %}0{% endif %}%"></div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-4 text-muted" style="font-size: 13px;">No intrusion telemetry logged.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- TOP COUNTRIES -->
+            <div class="col-md-4">
+                <div class="glass-card">
+                    <div class="card-header-custom">
+                        <h4 class="card-title-custom">
+                            <i data-lucide="globe-2"></i>
+                            Top Source Geographies
+                        </h4>
+                    </div>
+                    <div id="topCountriesList">
+                        {% if top_countries %}
+                            {% for item in top_countries %}
+                            <div class="stat-list-item">
+                                <div class="stat-list-meta">
+                                    <span class="stat-list-name">{{ item[0] }}</span>
+                                    <span class="stat-list-count">{{ item[1] }} attempts</span>
+                                </div>
+                                <div class="stat-progress-bar">
+                                    <div class="stat-progress-fill" style="width: {% if total_attacks > 0 %}{{ (item[1] / total_attacks) * 100 }}{% else %}0{% endif %}%"></div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-4 text-muted" style="font-size: 13px;">No intrusion telemetry logged.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TELEMETRY FEED AND LOGS -->
+        <div class="glass-card">
+            <!-- Tabs Navigation -->
+            <ul class="nav-tabs-custom">
+                <li>
+                    <button class="tab-btn active" onclick="switchTab('feedTab', this)">
+                        Live Intrusion Feed
+                    </button>
+                </li>
+                <li>
+                    <button class="tab-btn" onclick="switchTab('logsTab', this)">
+                        Raw Security Logs
+                    </button>
+                </li>
+            </ul>
+
+            <!-- TAB 1: LIVE ALERTS -->
+            <div id="feedTab" class="tab-content active">
+                <div class="live-feed-container" id="liveAlertsFeed">
+                    {% if logs %}
+                        {% for log in logs %}
+                        <div class="feed-item">
+                            <div class="feed-header">
+                                <span class="feed-ip">{{ log.ip_address }}</span>
+                                <span class="feed-time">{{ log.timestamp }}</span>
+                            </div>
+                            <div class="feed-desc">
+                                Attacker initiated authentication handshake using credentials
+                                <span class="badge text-bg-secondary font-monospace px-2 py-1" style="font-size:12px; background-color:#1e293b !important; color:#93c5fd !important;">{{ log.username }}</span>
+                                /
+                                <span class="badge text-bg-secondary font-monospace px-2 py-1" style="font-size:12px; background-color:#1e293b !important; color:#fca5a5 !important;">{{ log.password }}</span>
+                                from
+                                <span class="badge badge-country">{{ log.country }}</span>.
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5 text-muted" id="feedPlaceholder">Waiting for live handshake activity...</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- TAB 2: RAW SECURITY LOGS (SEARCHABLE & DETAIL VIEW) -->
+            <div id="logsTab" class="tab-content">
+                <!-- Search bar -->
+                <div class="search-wrapper">
+                    <i data-lucide="search"></i>
+                    <input type="text" id="logSearchInput" class="search-control" placeholder="Search logs by IP, credential, country, browser...">
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table-custom">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Client IP</th>
+                                <th>Target Username</th>
+                                <th>Target Password</th>
+                                <th>Country</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsTableBody">
+                            <!-- Populated dynamically via javascript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination controls -->
+                <div class="pagination-container">
+                    <div class="pagination-info" id="paginationInfo">Showing 0-0 of 0 entries</div>
+                    <div class="pagination-buttons">
+                        <button class="btn-pagination" id="prevPageBtn" disabled onclick="changePage(-1)">
+                            <i data-lucide="chevron-left" style="width: 14px; height: 14px; margin-top:-2px;"></i> Prev
+                        </button>
+                        <button class="btn-pagination" id="nextPageBtn" disabled onclick="changePage(1)">
+                            Next <i data-lucide="chevron-right" style="width: 14px; height: 14px; margin-top:-2px;"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Telemetry Frontend Logic -->
+    <script>
+        // Global variables holding live state
+        let allLogs = [];
+        let filteredLogs = [];
+        let currentPage = 1;
+        const itemsPerPage = 10;
+        let usernameChart, countryChart;
+        let lastLoggedCount = {{ total_attacks }};
+
+        // Tab Switching
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(button => button.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            btn.classList.add('active');
+            
+            // Re-render layout icons if necessary
+            lucide.createIcons();
+        }
+
+        // Initialize App & Charts
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            
+            // Fetch initial full datasets for the logs table
+            fetchLogsData();
+            
+            // Initial Chart render
+            initializeCharts();
+            
+            // Register real-time background socket polling
+            setInterval(pollTelemetry, 5000);
+
+            // Register search listener
+            document.getElementById('logSearchInput').addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().trim();
+                applyFilter(query);
+            });
+        });
+
+        // Initialize Chart.js Instances
+        function initializeCharts() {
+            const ctxUser = document.getElementById('usernameChart').getContext('2d');
+            const blueGradient = ctxUser.createLinearGradient(0, 0, 0, 260);
+            blueGradient.addColorStop(0, 'rgba(6, 182, 212, 0.45)');
+            blueGradient.addColorStop(1, 'rgba(6, 182, 212, 0)');
+
+            usernameChart = new Chart(ctxUser, {
+                type: 'bar',
+                data: {
+                    labels: [{% for item in top_usernames %}"{{ item[0] }}",{% endfor %}],
+                    datasets: [{
+                        label: 'Attempts',
+                        data: [{% for item in top_usernames %}{{ item[1] }},{% endfor %}],
+                        backgroundColor: blueGradient,
+                        borderColor: '#06b6d4',
+                        borderWidth: 2,
+                        borderRadius: 6,
+                        hoverBackgroundColor: '#22d3ee',
+                        barPercentage: 0.55
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)', drawTicks: false },
+                            ticks: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans', size: 11 } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans', size: 11 } }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            const ctxCountry = document.getElementById('countryChart').getContext('2d');
+            countryChart = new Chart(ctxCountry, {
+                type: 'doughnut',
+                data: {
+                    labels: [{% for item in top_countries %}"{{ item[0] }}",{% endfor %}],
+                    datasets: [{
+                        data: [{% for item in top_countries %}{{ item[1] }},{% endfor %}],
+                        backgroundColor: [
+                            '#06b6d4', // Cyan
+                            '#f43f5e', // Rose
+                            '#10b981', // Emerald
+                            '#f59e0b', // Amber
+                            '#8b5cf6'  // Violet
+                        ],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: '#94a3b8',
+                                font: { family: 'Plus Jakarta Sans', size: 11 },
+                                boxWidth: 12,
+                                padding: 12
+                            }
+                        }
+                    },
+                    cutout: '72%'
+                }
+            });
+        }
+
+        // Fetch logs data from backend
+        async function fetchLogsData() {
+            try {
+                const res = await fetch('/api/attacks');
+                if (!res.ok) return;
+                const data = await res.json();
+                allLogs = data.attacks;
+                filteredLogs = [...allLogs];
+                renderLogsTable();
+            } catch (err) {
+                console.error("Failed to load initial logs:", err);
+            }
+        }
+
+        // Background poller
+        async function pollTelemetry() {
+            try {
+                const res = await fetch('/api/attacks');
+                if (!res.ok) return;
+                const data = await res.json();
+                
+                const currentCount = data.total_attacks;
+                if (currentCount !== lastLoggedCount) {
+                    lastLoggedCount = currentCount;
+                    
+                    // Trigger pulse-glow on total count element
+                    const statEl = document.getElementById('statTotalAttacks');
+                    statEl.textContent = currentCount;
+                    statEl.classList.add('pulse-glow');
+                    setTimeout(() => statEl.classList.remove('pulse-glow'), 1000);
+                    
+                    // Update logs array locally
+                    allLogs = data.attacks;
+                    // Apply current filters
+                    const query = document.getElementById('logSearchInput').value.toLowerCase().trim();
+                    applyFilter(query, false);
+                    
+                    // Update live feed
+                    updateLiveFeedList(data.attacks.slice(0, 20));
+                    
+                    // Update metrics progress lists
+                    updateMetricsProgress(data);
+                    
+                    // Update charts dynamically without rebuilding canvas
+                    updateChartsTelemetry(data);
+                }
+            } catch (err) {
+                console.error("Telemetry update exception:", err);
+            }
+        }
+
+        // Render metrics lists dynamically
+        function updateMetricsProgress(data) {
+            const total = data.total_attacks;
+            
+            // helper to render list
+            const renderListHTML = (list, targetId) => {
+                const container = document.getElementById(targetId);
+                if (!list || list.length === 0) {
+                    container.innerHTML = `<div class="text-center py-4 text-muted" style="font-size: 13px;">No intrusion telemetry logged.</div>`;
+                    return;
+                }
+                let html = '';
+                list.forEach(item => {
+                    const pct = total > 0 ? ((item[1] / total) * 100).toFixed(0) : 0;
+                    html += `
+                    <div class="stat-list-item">
+                        <div class="stat-list-meta">
+                            <span class="stat-list-name">${escapeHTML(item[0])}</span>
+                            <span class="stat-list-count">${item[1]} attempts</span>
+                        </div>
+                        <div class="stat-progress-bar">
+                            <div class="stat-progress-fill" style="width: ${pct}%"></div>
+                        </div>
+                    </div>`;
+                });
+                container.innerHTML = html;
+            };
+
+            renderListHTML(data.top_usernames, 'topUsernamesList');
+            renderListHTML(data.top_passwords, 'topPasswordsList');
+            renderListHTML(data.top_countries, 'topCountriesList');
+        }
+
+        // Re-feed live list cards
+        function updateLiveFeedList(attacks) {
+            const container = document.getElementById('liveAlertsFeed');
+            if (attacks.length === 0) {
+                container.innerHTML = `<div class="text-center py-5 text-muted" id="feedPlaceholder">Waiting for live handshake activity...</div>`;
+                return;
+            }
+            
+            let html = '';
+            attacks.forEach(log => {
+                html += `
+                <div class="feed-item">
+                    <div class="feed-header">
+                        <span class="feed-ip">${escapeHTML(log.ip_address)}</span>
+                        <span class="feed-time">${escapeHTML(log.timestamp)}</span>
+                    </div>
+                    <div class="feed-desc">
+                        Attacker initiated authentication handshake using credentials
+                        <span class="badge text-bg-secondary font-monospace px-2 py-1" style="font-size:12px; background-color:#1e293b !important; color:#93c5fd !important;">${escapeHTML(log.username)}</span>
+                        /
+                        <span class="badge text-bg-secondary font-monospace px-2 py-1" style="font-size:12px; background-color:#1e293b !important; color:#fca5a5 !important;">${escapeHTML(log.password)}</span>
+                        from
+                        <span class="badge badge-country">${escapeHTML(log.country)}</span>.
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        // Update charts telemetry data
+        function updateChartsTelemetry(data) {
+            // Usernames
+            const userLabels = data.top_usernames.map(x => x[0]);
+            const userValues = data.top_usernames.map(x => x[1]);
+            usernameChart.data.labels = userLabels;
+            usernameChart.data.datasets[0].data = userValues;
+            usernameChart.update();
+
+            // Countries
+            const countryLabels = data.top_countries.map(x => x[0]);
+            const countryValues = data.top_countries.map(x => x[1]);
+            countryChart.data.labels = countryLabels;
+            countryChart.data.datasets[0].data = countryValues;
+            countryChart.update();
+        }
+
+        // Apply real-time client-side table filter
+        function applyFilter(query, resetPage = true) {
+            if (!query) {
+                filteredLogs = [...allLogs];
+            } else {
+                filteredLogs = allLogs.filter(log => {
+                    return (
+                        (log.ip_address && log.ip_address.toLowerCase().includes(query)) ||
+                        (log.username && log.username.toLowerCase().includes(query)) ||
+                        (log.password && log.password.toLowerCase().includes(query)) ||
+                        (log.country && log.country.toLowerCase().includes(query)) ||
+                        (log.city && log.city.toLowerCase().includes(query)) ||
+                        (log.browser && log.browser.toLowerCase().includes(query)) ||
+                        (log.operating_system && log.operating_system.toLowerCase().includes(query)) ||
+                        (log.organization && log.organization.toLowerCase().includes(query))
+                    );
+                });
+            }
+            if (resetPage) {
+                currentPage = 1;
+            }
+            renderLogsTable();
+        }
+
+        // Render logs data table on DOM
+        function renderLogsTable() {
+            const tbody = document.getElementById('logsTableBody');
+            tbody.innerHTML = '';
+            
+            if (filteredLogs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No matching security entries found.</td></tr>`;
+                updatePaginationControls();
+                return;
+            }
+            
+            const startIdx = (currentPage - 1) * itemsPerPage;
+            const endIdx = Math.min(startIdx + itemsPerPage, filteredLogs.length);
+            const pageItems = filteredLogs.slice(startIdx, endIdx);
+            
+            pageItems.forEach((log) => {
+                // main row
+                const tr = document.createElement('tr');
+                tr.onclick = () => toggleRowExpand(`detail-${log.id}`);
+                tr.innerHTML = `
+                    <td>${escapeHTML(log.timestamp)}</td>
+                    <td class="font-monospace text-warning">${escapeHTML(log.ip_address)}</td>
+                    <td class="font-monospace" style="color: #93c5fd;">${escapeHTML(log.username || '-')}</td>
+                    <td class="font-monospace" style="color: #fca5a5;">${escapeHTML(log.password || '-')}</td>
+                    <td><span class="badge badge-country">${escapeHTML(log.country || 'Unknown')}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-info py-0 px-2" style="font-size:11px;">Inspect</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+
+                // expandable row
+                const expandTr = document.createElement('tr');
+                expandTr.className = 'expand-row';
+                expandTr.innerHTML = `
+                    <td colspan="6">
+                        <div class="detail-pane" id="detail-${log.id}">
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <div class="detail-label">Origin Location</div>
+                                    <div class="detail-value">${escapeHTML(log.city || 'Unknown')}, ${escapeHTML(log.country || 'Unknown')}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Network Autonomous System (ASN)</div>
+                                    <div class="detail-value">${escapeHTML(log.organization || 'Unknown')}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Target Browser / OS Client</div>
+                                    <div class="detail-value">${escapeHTML(log.browser || 'Unknown')} (${escapeHTML(log.operating_system || 'Unknown')})</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Device Type</div>
+                                    <div class="detail-value">${escapeHTML(log.device || 'Unknown')}</div>
+                                </div>
+                                <div class="detail-item col-span-2" style="grid-column: span 2;">
+                                    <div class="detail-label">HTTP Referrer Link</div>
+                                    <div class="detail-value">${escapeHTML(log.referrer || 'Direct')}</div>
+                                </div>
+                                <div class="detail-item col-span-2" style="grid-column: span 2;">
+                                    <div class="detail-label">Raw Request User-Agent String</div>
+                                    <div class="detail-value" style="font-size: 11.5px;">${escapeHTML(log.user_agent || 'Unknown')}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(expandTr);
+            });
+            
+            updatePaginationControls();
+        }
+
+        // Row detail toggle
+        function toggleRowExpand(id) {
+            const pane = document.getElementById(id);
+            const isOpen = pane.classList.contains('open');
+            
+            // Close all other panels
+            document.querySelectorAll('.detail-pane').forEach(el => el.classList.remove('open'));
+            
+            if (!isOpen) {
+                pane.classList.add('open');
+            }
+        }
+
+        // Pagination updates
+        function updatePaginationControls() {
+            const totalItems = filteredLogs.length;
+            const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+            
+            const startIdx = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+            const endIdx = Math.min(currentPage * itemsPerPage, totalItems);
+            
+            document.getElementById('paginationInfo').textContent = `Showing ${startIdx}-${endIdx} of ${totalItems} entries`;
+            
+            document.getElementById('prevPageBtn').disabled = currentPage === 1;
+            document.getElementById('nextPageBtn').disabled = currentPage === totalPages;
+            
+            lucide.createIcons();
+        }
+
+        function changePage(direction) {
+            currentPage += direction;
+            renderLogsTable();
+        }
+
+        // Helper to prevent injection
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag] || tag)
+            );
+        }
+    </script>
+</body>
+</html>
